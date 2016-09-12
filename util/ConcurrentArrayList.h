@@ -1,8 +1,8 @@
 /*
  * ConcurrentArrayList.h
- *
- *  Created on: 2016Äê9ÔÂ11ÈÕ
- *      Author: 80374361
+ *	çº¿ç¨‹å®‰å…¨çš„arrayListå®žçŽ°
+ *  Created on: 2016/09/09
+ *      Author: maihuiqiang
  */
 
 #ifndef CONCURRENTARRAYLIST_H_
@@ -13,8 +13,10 @@
 template <class T>
 class ConcurrentArrayList {
 private :
-	int capacity;
-	int length;
+	const static int DEFAULT_CAPACITY = 16;	// é»˜è®¤åˆå§‹é•¿åº¦
+	const static int DEFAULT_STEP = 16;		// é»˜è®¤æ­¥è¿›é•¿åº¦
+	int capacity;	// listå®¹é‡
+	int length;		// listå…ƒç´ ä¸ªæ•°
 	T *data;
 	pthread_rwlock_t rwLock;
 public :
@@ -30,8 +32,13 @@ public :
 		this->capacity = size;
 		this->data = new T[capacity];
 	}
-	~ConcurrentArrayList() {}
+	~ConcurrentArrayList() {
+		delete []data;
+	}
 
+	/**
+	 * é€šè¿‡ä¸‹æ ‡èŽ·å–å¯¹åº”çš„å…ƒç´ 
+	 */
 	T get(int i) {
 		pthread_rwlock_rdlock(&rwLock);
 		if (i >= this->length) {
@@ -43,22 +50,30 @@ public :
 		return tmp;
 	}
 
-	void put(T t) {
+	/**
+	 * åœ¨listæœ«å°¾æ·»åŠ å…ƒç´ 
+	 */
+	void add(T t) {
 		pthread_rwlock_wrlock(&rwLock);
 		T buf = t;
-		// ÈôÊý×é³¤¶È²»¹»£¬Êý×é³¤¶È½«ÏßÐÔÔö³¤£¬³¤¶ÈÃ¿´Î²½½ø16
+		// è‹¥é•¿åº¦ä¸å¤Ÿï¼Œæ•°ç»„é•¿åº¦æ¯æ¬¡æ­¥è¿›DEFAULT_STEP
 		if (length + 1 > capacity) {
+			capacity = capacity + DEFAULT_STEP;
 			T *p = data;
-			data = new T[capacity + 16];
+			data = new T[capacity];
 			for (int i=0; i<length; ++i) {
 				data[i] = p[i];
 			}
+			delete []p;
 		}
 		data[length] = buf;
 		length++;
 		pthread_rwlock_unlock(&rwLock);
 	}
 
+	/**
+	 * è¿”å›žlistå…ƒç´ ä¸ªæ•°
+	 */
 	int size() {
 		pthread_rwlock_rdlock(&rwLock);
 		int tmp = length;
@@ -66,7 +81,9 @@ public :
 		return tmp;
 	}
 
-	// TODO ´ýÓÅ»¯£¬Èô´óÁ¿µÄremove»áµ¼ÖÂÄÚ´æÐ¹Â¶
+	/**
+	 * æ ¹æ®ä¸‹æ ‡åˆ é™¤å…ƒç´ 
+	 */
 	void remove(int index) {
 		pthread_rwlock_wrlock(&rwLock);
 		if (index >= this->length) {
